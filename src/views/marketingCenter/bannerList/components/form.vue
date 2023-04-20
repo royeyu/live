@@ -1,0 +1,191 @@
+<template>
+  <div class="customerForm app-container">
+    <div class="texttitle">
+      {{ $route.meta.title }}
+      <span class="requiredText">注：带有 <i>*</i> 必填项</span>
+    </div>
+    <el-form :model="customerForm" label-width="120px"   :rules="rules" ref="customerForm">
+      <el-row :gutter="30">
+        <el-col :span="12">
+          <el-form-item label="业务类型:" prop="busiType">
+            <el-select v-model="customerForm.busiType" clearable placeholder="请选择业务类型">
+              <el-option
+                v-for="item in bannerTypeLIstOption"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              >
+              </el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="来源:" prop="srcType">
+            <el-select v-model="customerForm.srcType" clearable placeholder="请选择来源">
+              <el-option
+                v-for="item in bannerSourceOption"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              >
+              </el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="轮播图:" prop="imgUrl">
+            <el-upload
+              class="avatar-uploader"
+              :show-file-list="true"
+              :limit="1"
+              :action='fileUrl'
+              list-type="picture-card"
+              accept=".jpg,.png"
+              :on-preview="handlePictureCardPreview"
+              :headers="{'Authorization':  tokenData}"
+              :on-remove="function (files, fileList) { return remopveFile(files, fileList, 'imgUrl')}"
+              :on-success="function (response,files, fileList) { return handleSuccess(response,files, fileList, 'imgUrl')}"
+              :file-list="customerForm.imgUrl"
+              :before-upload="beforeAvatarUpload"
+            >
+              <i class="el-icon-plus"></i>
+            </el-upload>
+            <el-dialog :visible.sync="dialogVisible">
+              <img width="100%" :src="dialogImageUrl" alt="">
+            </el-dialog>
+            <div class="texttips">说明：支持JPG、PNG格式,允许上传的文件最大值5MB
+              封面尺寸宽600*高500
+            </div>
+          </el-form-item>
+          <el-form-item label="上下架时间:" prop="upDownTime">
+            <el-date-picker
+              v-model="customerForm.upDownTime"
+              type="datetimerange"
+              range-separator="至"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              start-placeholder="上架时间"
+              end-placeholder="下架时间"
+            >
+            </el-date-picker>
+          </el-form-item>
+          <el-form-item label="内链:" prop="internalJumpUrl">
+            <el-input v-model="customerForm.internalJumpUrl" placeholder="请输入内链"></el-input>
+          </el-form-item>
+          <el-form-item label="外链:" prop="externalJumpUrl">
+            <el-input v-model="customerForm.externalJumpUrl" placeholder="请输入外链"></el-input>
+          </el-form-item>
+          <el-form-item label="排序:" prop="orders">
+            <el-input v-model="customerForm.orders" placeholder="请输入排序"></el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <div class="butList">
+        <el-button   :loading="subloading" @click="subData" type="primary">确定</el-button>
+        <el-button   @click="goReturn">取消</el-button>
+      </div>
+    </el-form>
+  </div>
+</template>
+
+<script>
+  import { data } from '@/mixns/data'
+  import { getToken } from '@/utils/auth'
+  import {validIntNum, validNotUsername} from "@/utils/form";
+
+  export default {
+    mixins: [data],
+    props: {
+      statusText: {
+        type: String,
+        default: '新增'
+      }
+    },
+    data() {
+      return {
+        imageUrl: '',
+        tokenData: '',
+        dialogImageUrl: '',
+        dialogVisible: false,
+        customerForm: {
+          busiType: '',
+          srcType: '',
+          internalJumpUrl: '',
+          externalJumpUrl: '',
+          orders: '',
+          upDownTime: [],
+          imgUrl: []
+        },
+        rules: {
+          busiType: [
+            { required: true, message: '请选择业务类型', trigger: 'blur' }
+            // { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+          ],
+          srcType: [
+            { required: true, message: '请选择来源', trigger: 'blur' }
+          ],
+          orders: [
+            { required: true, message: '请输入排序', trigger: 'blur' },
+            { validator: validIntNum }
+          ],
+          imgUrl: [
+            { required: true, message: '请上传轮播图', trigger: 'blur' }
+          ],
+          internalJumpUrl: [
+            { required: false, message: '请输入内链', trigger: 'blur' },
+            {min: 5, max:100,message: '字符长度在5-200'}
+          ],
+          externalJumpUrl: [
+            { required: false, message: '请输入外链', trigger: 'blur' },
+            {min: 5, max:100,message: '字符长度在5-200'}
+          ],
+          upDownTime: [
+            { required: true, message: '请选择上下架时间', trigger: 'blur' }
+          ]
+        }
+      }
+    },
+    created() {
+      // 业务类型
+      this.dictGetByCodeData('service_type').then(res => {
+        this.bannerTypeLIstOption = res
+      })
+    },
+    mounted() {
+      this.tokenData = getToken()
+    },
+    methods: {
+      handleSuccess(response,files, fileList, ref) {
+        console.log(response)
+        fileList.filter(item => {
+          if (item.response) {
+            item.url = item.response.data.url
+            item.attachName = item.response.data.attachName
+          }
+          return item
+        })
+        this.customerForm[ref] = fileList
+      },
+      beforeAvatarUpload(file) {
+        const isJPG = (file.type === 'image/jpeg') || (file.type === 'image/png')
+        const isLt2M = file.size / 1024 / 1024 < 5
+
+        if (!isJPG) {
+          this.$message.error('上传头像图片只能是 JPG或者 PNG 格式!')
+        }
+        if (!isLt2M) {
+          this.$message.error('上传头像图片大小不能超过 5MB!')
+        }
+        return isJPG && isLt2M
+      },
+      // 保存
+      subData() {
+        this.$refs['customerForm'].validate((valid) => {
+          if (valid) {
+            this.$emit('subData', this.customerForm)
+          } else {
+            console.log('error submit!!')
+            return false
+          }
+        })
+      }
+    }
+  }
+</script>
+
+
