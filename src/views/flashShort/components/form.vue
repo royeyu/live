@@ -228,6 +228,20 @@
               例：【联通助理】{}客户经理为您服务，联通你我，让爱生长！关注“联通助理”公众号，畅享智慧通信。
             </div>
           </el-form-item>
+          <el-form-item label="模板展示内容" prop="templateDisplayContent">
+            <el-input
+              v-model="customerForm.templateDisplayContent"
+              maxlength="200"
+              :rows="5"
+              show-word-limit
+              type="textarea"
+              placeholder="请输入模板展示内容"
+              @input="inPutText"
+            />
+            <div class="texttips">
+              说明：该内容为页面展示内容，若不填写，则默认使用模板内容。
+            </div>
+          </el-form-item>
           <el-form-item v-if="showkey" label="变量名称" prop="templateKey">
             <!--            <el-input v-model="customerForm.templateKey" placeholder="请输入变量名称" />-->
             <el-select v-model="customerForm.templateKey" clearable placeholder="请选择变量名称" @change="templatekeyChange">
@@ -342,6 +356,7 @@ export default {
         templateInfo: '',
         templateName: '',
         templateContent: '',
+        templateDisplayContent: '',
         apiAccountId: '',
         fusionServiceFlag: '',
         templateKey: '',
@@ -377,6 +392,9 @@ export default {
           { required: true, message: '请输入模板内容' },
           // { min: 0, max: 200, message: '长度在200以内' },
           { validator: valitempContent }
+        ],
+        templateDisplayContent: [
+          { required: false, message: '请输入模板展示内容' }
         ],
         templateName: [
           { required: true, message: '请输入模板名称' },
